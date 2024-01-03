@@ -1,0 +1,42 @@
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+
+android {
+    compileSdkVersion hs.android.compileSdkVersion
+
+    defaultConfig {
+
+        applicationId "org.hyperskill.musicplayer"
+        minSdkVersion hs.android.minSdkVersion
+        targetSdkVersion hs.android.targetSdkVersion
+        versionCode 1
+        versionName '1.0'
+    }
+
+    buildFeatures {
+        viewBinding true
+    }
+}
+
+dependencies {
+    def kotlinVersion = hs.android.kotlinVersion
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlinVersion"
+    implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.6.4"
+
+    def coreKtx = hs.android.lib.coreKtx
+    implementation "androidx.core:core-ktx:$coreKtx"
+
+    def appCompat = hs.android.lib.appCompat
+    implementation "androidx.appcompat:appcompat:$appCompat"
+
+    def constraintLayout = hs.android.lib.constraintLayout
+    implementation "androidx.constraintlayout:constraintlayout:$constraintLayout"
+
+    def material = hs.android.lib.material
+    implementation "com.google.android.material:material:$material"
+
+    implementation "androidx.activity:activity-ktx:1.2.0"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.0.0"
+    implementation "androidx.recyclerview:recyclerview:1.2.0"
+    implementation "androidx.fragment:fragment-ktx:1.2.0"
+}
