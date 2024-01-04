@@ -30,6 +30,22 @@ class ItemsAdapter(
         diffResult.dispatchUpdatesTo(this)
     }
 
+    fun updateCurrentTrack(track: Item.Track?) {
+        val newItems = if (track == null) {
+            (items as List<Item.Track>).map { it.copy(state = Item.Track.TrackState.PAUSED) }
+        } else {
+            (items as List<Item.Track>).map {
+                if (it.song.id == track.song.id) it.copy(state = Item.Track.TrackState.PLAYING)
+                else it.copy(state = Item.Track.TrackState.PAUSED)
+            }
+        }
+        val diffCallback = ItemsDiffCallback(items, newItems)
+        val diffResult = DiffUtil.calculateDiff(diffCallback)
+        this.items.clear()
+        this.items.addAll(newItems)
+        diffResult.dispatchUpdatesTo(this)
+    }
+
     override fun getItemCount(): Int {
         return items.size
     }

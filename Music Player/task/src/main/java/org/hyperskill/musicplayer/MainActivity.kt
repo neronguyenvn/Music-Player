@@ -10,16 +10,18 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.hyperskill.musicplayer.adapter.ItemsAdapter
 import org.hyperskill.musicplayer.databinding.ActivityMainBinding
-import org.hyperskill.musicplayer.feature.music.MainActivityViewModelState
+import org.hyperskill.musicplayer.feature.music.MainActivityUiState
 import org.hyperskill.musicplayer.feature.music.MainAddPlaylistFragment
 import org.hyperskill.musicplayer.feature.music.MainPlayerControllerFragment
 import org.hyperskill.musicplayer.feature.music.MainViewModel
+import org.hyperskill.musicplayer.model.Item
 import org.hyperskill.musicplayer.model.toTrackList
 
-
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private val binding by lazy { ActivityMainBinding.inflate(layoutInflater) }
@@ -29,11 +31,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
-        if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                .add(R.id.mainFragmentContainer, MainPlayerControllerFragment(viewModel))
-                .commit()
-        }
         binding.mainButtonSearch.setOnClickListener {
             viewModel.onSearchClick()
         }
@@ -47,11 +44,12 @@ class MainActivity : AppCompatActivity() {
         )
         binding.mainSongList.adapter = itemAdapter
         binding.mainSongList.layoutManager = LinearLayoutManager(this)
+
         lifecycleScope.launch {
             viewModel.mainUiState.collect {
-                when (it.viewModelState.state) {
-                    MainActivityViewModelState.State.PLAY_MUSIC -> {
-                        itemAdapter.update(it.viewModelState.currentPlayList.toTrackList(it.currentTrack))
+                when (it.state) {
+                    MainActivityUiState.State.PLAY_MUSIC -> {
+                        itemAdapter.update(it.currentPlayList.toTrackList(null))
                         supportFragmentManager.beginTransaction()
                             .replace(
                                 R.id.mainFragmentContainer,
@@ -61,14 +59,19 @@ class MainActivity : AppCompatActivity() {
                             .commit()
                     }
 
-                    MainActivityViewModelState.State.ADD_PLAYLIST -> {
-                        itemAdapter.update(it.viewModelState.loadedPlaylist)
+                    MainActivityUiState.State.ADD_PLAYLIST -> {
+                        itemAdapter.update(it.loadedPlaylist)
                         supportFragmentManager.beginTransaction()
                             .replace(R.id.mainFragmentContainer, MainAddPlaylistFragment(viewModel))
                             .addToBackStack(null)
                             .commit()
                     }
                 }
+            }
+        }
+        lifecycleScope.launch {
+            viewModel.playerControllerUiState.collect {
+                itemAdapter.updateCurrentTrack(it.currentTrack)
             }
         }
     }
@@ -99,7 +102,7 @@ class MainActivity : AppCompatActivity() {
                         }"
                     )
                     .setItems(
-                        viewModel.mainUiState.value.viewModelState.playlistList.toMutableList()
+                        viewModel.mainUiState.value.playlistList.toMutableList()
                             .apply { if (item.itemId == R.id.mainMenuDeletePlaylist && this.isNotEmpty()) removeFirst() }
                             .map { it.name }
                             .toTypedArray()) { _, pos ->

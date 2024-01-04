@@ -1,11 +1,14 @@
-apply plugin: 'com.android.application'
-apply plugin: 'kotlin-android'
+plugins {
+    id 'com.android.application'
+    id 'kotlin-android'
+    id 'kotlin-kapt'
+    id 'dagger.hilt.android.plugin'
+}
 
 android {
     compileSdkVersion hs.android.compileSdkVersion
 
     defaultConfig {
-
         applicationId "org.hyperskill.musicplayer"
         minSdkVersion hs.android.minSdkVersion
         targetSdkVersion hs.android.targetSdkVersion
@@ -39,4 +42,8 @@ dependencies {
     implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.0.0"
     implementation "androidx.recyclerview:recyclerview:1.2.0"
     implementation "androidx.fragment:fragment-ktx:1.2.0"
+
+    // Dagger - Hilt
+    implementation 'com.google.dagger:hilt-android:2.39.1'
+    kapt 'com.google.dagger:hilt-compiler:2.39.1'
 }
