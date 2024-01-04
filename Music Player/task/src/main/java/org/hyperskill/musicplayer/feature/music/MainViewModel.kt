@@ -49,12 +49,6 @@ class MainViewModel @Inject constructor(
     private val mediaPlayer: MainMediaPlayer
 ) : ViewModel() {
 
-    init {
-        mediaPlayer.onComplete {
-            startTrack(null)
-        }
-    }
-
     private val _mainUiState = MutableStateFlow(MainActivityUiState())
     val mainUiState = _mainUiState.asStateFlow()
 
@@ -263,6 +257,9 @@ class MainViewModel @Inject constructor(
         mediaPlayer.stop()
         if (track != null) {
             mediaPlayer.play()
+            mediaPlayer.onComplete {
+                startTrack(null)
+            }
             updatePosition()
         }
     }
