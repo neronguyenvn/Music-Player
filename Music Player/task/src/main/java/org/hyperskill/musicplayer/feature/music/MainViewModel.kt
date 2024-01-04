@@ -38,12 +38,17 @@ data class MainActivityUiState(
     val currentTrack: Item.Track? = null
 )
 
+data class PlayerControllerUiState(
+    val currentTrack: Item.Track? = null,
+    val currentPosition: Int = 0
+)
+
 class MainViewModel : ViewModel() {
 
-    private val _currentTrackFlow: MutableStateFlow<Item.Track?> = MutableStateFlow(null)
+    private val _currentTrack: MutableStateFlow<Item.Track?> = MutableStateFlow(null)
     private val _mainViewModelState = MutableStateFlow(MainActivityViewModelState())
 
-    val mainUiState = combine(_mainViewModelState, _currentTrackFlow) { viewModelState, track ->
+    val mainUiState = combine(_mainViewModelState, _currentTrack) { viewModelState, track ->
         MainActivityUiState(
             viewModelState = viewModelState,
             currentTrack = track
@@ -54,11 +59,23 @@ class MainViewModel : ViewModel() {
         initialValue = MainActivityUiState()
     )
 
+    private val _currentPosition = MutableStateFlow(0)
+    val playerControllerUiState = combine(_currentPosition, _currentTrack) { position, track ->
+        PlayerControllerUiState(
+            currentPosition = position,
+            currentTrack = track
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = PlayerControllerUiState()
+    )
+
+
     var addPlaylistEtPlaylistName = ""
 
     private val mainViewModelState get() = _mainViewModelState.value
-    private val currentTrack get() = _currentTrackFlow.value
-
+    private val currentTrack get() = _currentTrack.value
 
     fun onSearchClick() {
         addPlaylist(defaultPlaylist)
@@ -151,7 +168,7 @@ class MainViewModel : ViewModel() {
             val shouldKeepCurrentTrack =
                 currentTrack?.song in mainViewModelState.playlistList[position].songs
             _mainViewModelState.update { it.copy(currentPlayList = newPlaylist) }
-            _currentTrackFlow.update { if (shouldKeepCurrentTrack) it else null }
+            if (!shouldKeepCurrentTrack) changeCurrentTrack(null)
         } else {
             _mainViewModelState.update {
 
@@ -191,12 +208,12 @@ class MainViewModel : ViewModel() {
             return
         }
 
-        _currentTrackFlow.update {
+        changeCurrentTrack(
             Item.Track(
                 song = mainViewModelState.currentPlayList.songs[position],
                 state = Item.Track.TrackState.PLAYING
             )
-        }
+        )
     }
 
     fun onPlayOrPauseClick() {
@@ -205,26 +222,32 @@ class MainViewModel : ViewModel() {
             switchCurrentTrackState()
             return
         }
-        _currentTrackFlow.update {
+        changeCurrentTrack(
             Item.Track(
                 song = mainViewModelState.currentPlayList.songs[0],
                 state = Item.Track.TrackState.PLAYING
             )
-
-        }
+        )
     }
 
-    fun onStopClick() {
-        _currentTrackFlow.update { null }
-    }
+    fun onStopClick() = changeCurrentTrack(null)
 
     private fun switchCurrentTrackState() {
-        _currentTrackFlow.update {
+        _currentTrack.update {
             it?.copy(
                 state = if (it.state == Item.Track.TrackState.PLAYING) {
                     Item.Track.TrackState.PAUSED
                 } else Item.Track.TrackState.PLAYING
             )
         }
+    }
+
+    fun onControllerSeekBarChange(value: Int) {
+        _currentPosition.value = value
+    }
+
+    private fun changeCurrentTrack(track: Item.Track?) {
+        _currentTrack.value = track
+        _currentPosition.value = 0
     }
 }
