@@ -23,12 +23,12 @@ data class MainActivityUiState(
 
 class MainViewModel : ViewModel() {
 
-    private val _viewModelState = MutableStateFlow(MainActivityUiState())
-    val uiState = _viewModelState.asStateFlow()
+    private val _mainUiState = MutableStateFlow(MainActivityUiState())
+    val mainUiState = _mainUiState.asStateFlow()
 
     var addPlaylistEtPlaylistName = ""
 
-    private val viewModelState get() = uiState.value
+    private val mainUiStateValue get() = mainUiState.value
     private val defaultSongs = (1..10).map {
         Song(
             id = it,
@@ -41,12 +41,12 @@ class MainViewModel : ViewModel() {
 
     fun onSearchClick() {
         addPlaylist(defaultPlaylist)
-        if (viewModelState.state == PLAY_MUSIC) {
-            _viewModelState.update {
+        if (mainUiStateValue.state == PLAY_MUSIC) {
+            _mainUiState.update {
                 it.copy(currentPlayList = defaultPlaylist)
             }
         } else {
-            _viewModelState.update {
+            _mainUiState.update {
                 it.copy(loadedPlaylist = defaultPlaylist.songs.map { it.toSelector() })
             }
         }
@@ -55,7 +55,7 @@ class MainViewModel : ViewModel() {
     //region Add A Playlist
     fun onItemLongClick(position: Int) {
         onMenuAddClick()
-        _viewModelState.update {
+        _mainUiState.update {
             it.copy(
                 loadedPlaylist = it.loadedPlaylist.toMutableList().apply {
                     this[position] = this[position].copy(isSelected = true)
@@ -65,10 +65,10 @@ class MainViewModel : ViewModel() {
     }
 
     fun onMenuAddClick(): String {
-        if (viewModelState.currentPlayList.songs.isEmpty()) {
+        if (mainUiStateValue.currentPlayList.songs.isEmpty()) {
             return "no songs loaded, click search to load songs"
         }
-        _viewModelState.update {
+        _mainUiState.update {
             it.copy(
                 state = ADD_PLAYLIST,
                 loadedPlaylist = defaultSongs.map { song -> song.toSelector() })
@@ -77,7 +77,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun onItemCheck(isChecked: Boolean, position: Int) {
-        _viewModelState.update {
+        _mainUiState.update {
             it.copy(
                 loadedPlaylist = it.loadedPlaylist.toMutableList().apply {
                     this[position] = this[position].copy(isSelected = isChecked)
@@ -91,23 +91,23 @@ class MainViewModel : ViewModel() {
     }
 
     fun onAddOkClick(): String {
-        if (viewModelState.loadedPlaylist.none { it.isSelected }) return "Add at least one song to your playlist"
+        if (mainUiStateValue.loadedPlaylist.none { it.isSelected }) return "Add at least one song to your playlist"
         if (addPlaylistEtPlaylistName.isBlank()) return "Add a name to your playlist"
         if (addPlaylistEtPlaylistName == "All Songs") return "All Songs is a reserved name choose another playlist name"
         addPlaylist(
             Playlist(
                 addPlaylistEtPlaylistName,
-                viewModelState.loadedPlaylist.filter { it.isSelected }
+                mainUiStateValue.loadedPlaylist.filter { it.isSelected }
                     .map { selector -> selector.song }
             ))
         addPlaylistEtPlaylistName = ""
-        _viewModelState.update { it.copy(state = PLAY_MUSIC) }
+        _mainUiState.update { it.copy(state = PLAY_MUSIC) }
         return ""
     }
 
     fun onCancelClick() {
         addPlaylistEtPlaylistName = ""
-        _viewModelState.update {
+        _mainUiState.update {
             it.copy(
                 state = PLAY_MUSIC,
                 loadedPlaylist = emptyList()
@@ -116,8 +116,8 @@ class MainViewModel : ViewModel() {
     }
 
     private fun addPlaylist(playlist: Playlist) {
-        if (viewModelState.playlistList.none { it.name == playlist.name }) {
-            _viewModelState.update {
+        if (mainUiStateValue.playlistList.none { it.name == playlist.name }) {
+            _mainUiState.update {
                 it.copy(playlistList = it.playlistList + playlist)
             }
         }
@@ -125,20 +125,20 @@ class MainViewModel : ViewModel() {
     //endregion
 
     fun loadPlaylist(position: Int) {
-        val newPlaylist = viewModelState.playlistList[position]
-        if (viewModelState.state == PLAY_MUSIC) {
+        val newPlaylist = mainUiStateValue.playlistList[position]
+        if (mainUiStateValue.state == PLAY_MUSIC) {
             val shouldKeepCurrentTrack =
-                viewModelState.currentTrack?.song in viewModelState.playlistList[position].songs
-            _viewModelState.update {
+                mainUiStateValue.currentTrack?.song in mainUiStateValue.playlistList[position].songs
+            _mainUiState.update {
                 it.copy(
                     currentTrack = if (shouldKeepCurrentTrack) it.currentTrack else null,
                     currentPlayList = newPlaylist
                 )
             }
         } else {
-            _viewModelState.update {
+            _mainUiState.update {
 
-                val includedInOldListAndSelectedIds = viewModelState.loadedPlaylist
+                val includedInOldListAndSelectedIds = mainUiStateValue.loadedPlaylist
                     .filter { selector -> selector.song in newPlaylist.songs && selector.isSelected }
                     .map { selector -> selector.song.id }
                 it.copy(
@@ -153,8 +153,8 @@ class MainViewModel : ViewModel() {
     }
 
     fun deletePlaylist(position: Int) {
-        val thisPlaylist = viewModelState.playlistList[position]
-        _viewModelState.update {
+        val thisPlaylist = mainUiStateValue.playlistList[position]
+        _mainUiState.update {
             it.copy(
                 playlistList = it.playlistList.toMutableList().apply { remove(thisPlaylist) },
                 currentPlayList = if (it.currentPlayList == thisPlaylist) defaultPlaylist else it.currentPlayList,
@@ -166,46 +166,46 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun playOrPause(position: Int) {
-        if (viewModelState.currentTrack != null &&
-            viewModelState.currentPlayList.songs[position].id == viewModelState.currentTrack!!.song.id
+    fun onPlayOrPauseClick(position: Int) {
+        if (mainUiStateValue.currentTrack != null &&
+            mainUiStateValue.currentPlayList.songs[position].id == mainUiStateValue.currentTrack!!.song.id
         ) {
             switchCurrentTrackState()
             return
         }
 
-        _viewModelState.update {
+        _mainUiState.update {
             it.copy(
                 currentTrack = Item.Track(
-                    song = viewModelState.currentPlayList.songs[position],
+                    song = mainUiStateValue.currentPlayList.songs[position],
                     state = Item.Track.TrackState.PLAYING
                 )
             )
         }
     }
 
-    fun playPause() {
-        if (viewModelState.currentPlayList.songs.isEmpty()) return
-        if (viewModelState.currentTrack != null) {
+    fun onPlayOrPauseClick() {
+        if (mainUiStateValue.currentPlayList.songs.isEmpty()) return
+        if (mainUiStateValue.currentTrack != null) {
             switchCurrentTrackState()
             return
         }
-        _viewModelState.update {
+        _mainUiState.update {
             it.copy(
                 currentTrack = Item.Track(
-                    song = viewModelState.currentPlayList.songs[0],
+                    song = mainUiStateValue.currentPlayList.songs[0],
                     state = Item.Track.TrackState.PLAYING
                 )
             )
         }
     }
 
-    fun stop() {
-        _viewModelState.update { it.copy(currentTrack = null) }
+    fun onStopClick() {
+        _mainUiState.update { it.copy(currentTrack = null) }
     }
 
     private fun switchCurrentTrackState() {
-        _viewModelState.update {
+        _mainUiState.update {
             it.copy(
                 currentTrack = it.currentTrack?.copy(
                     state = if (it.currentTrack.state == Item.Track.TrackState.PLAYING) {
