@@ -3,12 +3,15 @@ package org.hyperskill.musicplayer
 import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -18,22 +21,34 @@ import org.hyperskill.musicplayer.feature.music.MainActivityUiState
 import org.hyperskill.musicplayer.feature.music.MainAddPlaylistFragment
 import org.hyperskill.musicplayer.feature.music.MainPlayerControllerFragment
 import org.hyperskill.musicplayer.feature.music.MainViewModel
-import org.hyperskill.musicplayer.model.Item
-import org.hyperskill.musicplayer.model.toTrackList
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private val binding by lazy { ActivityMainBinding.inflate(layoutInflater) }
     private val viewModel: MainViewModel by viewModels()
+    private var previousState = MainActivityUiState.State.PLAY_MUSIC
 
-    @SuppressLint("NotifyDataSetChanged")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(binding.root)
+        supportFragmentManager.beginTransaction()
+            .add(
+                R.id.mainFragmentContainer,
+                MainPlayerControllerFragment(viewModel),
+            )
+            .addToBackStack(null)
+            .commit()
         binding.mainButtonSearch.setOnClickListener {
             viewModel.onSearchClick()
         }
+        /*        val itemAdapter = ItemsAdapter(
+            onTrackPlayOrPause = { position -> viewModel.onPlayOrPauseClick(position) },
+            onTrackLongClick = { position -> viewModel.onItemLongClick(position) },
+            onSongSelectorClick = { isChecked, position ->
+                viewModel.onItemCheck(isChecked, position)
+            }
+        )*/
         val itemAdapter = ItemsAdapter(
             mutableListOf(),
             onTrackPlayOrPause = { position -> viewModel.onPlayOrPauseClick(position) },
@@ -46,32 +61,44 @@ class MainActivity : AppCompatActivity() {
         binding.mainSongList.layoutManager = LinearLayoutManager(this)
 
         lifecycleScope.launch {
-            viewModel.mainUiState.collect {
-                when (it.state) {
-                    MainActivityUiState.State.PLAY_MUSIC -> {
-                        itemAdapter.update(it.currentPlayList.toTrackList(null))
-                        supportFragmentManager.beginTransaction()
-                            .replace(
-                                R.id.mainFragmentContainer,
-                                MainPlayerControllerFragment(viewModel)
-                            )
-                            .addToBackStack(null)
-                            .commit()
-                    }
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.mainUiState.collect {
+                    when (it.state) {
+                        MainActivityUiState.State.PLAY_MUSIC -> {
+                            itemAdapter.update(it.currentPlayList.tracks)
+                            /*
+                                                itemAdapter.submitList(it.currentPlayList.tracks)
+                        */
+                            if (it.state != previousState) {
+                                supportFragmentManager.beginTransaction()
+                                    .replace(
+                                        R.id.mainFragmentContainer,
+                                        MainPlayerControllerFragment(viewModel),
+                                    )
+                                    .addToBackStack(null)
+                                    .commit()
+                                previousState = MainActivityUiState.State.PLAY_MUSIC
+                            }
+                        }
 
-                    MainActivityUiState.State.ADD_PLAYLIST -> {
-                        itemAdapter.update(it.loadedPlaylist)
-                        supportFragmentManager.beginTransaction()
-                            .replace(R.id.mainFragmentContainer, MainAddPlaylistFragment(viewModel))
-                            .addToBackStack(null)
-                            .commit()
+                        MainActivityUiState.State.ADD_PLAYLIST -> {
+                            itemAdapter.update(it.loadedPlaylist)
+                            /*
+                                                itemAdapter.submitList(it.loadedPlaylist)
+                        */
+                            if (it.state != previousState) {
+                                supportFragmentManager.beginTransaction()
+                                    .replace(
+                                        R.id.mainFragmentContainer,
+                                        MainAddPlaylistFragment(viewModel),
+                                    )
+                                    .addToBackStack(null)
+                                    .commit()
+                                previousState = MainActivityUiState.State.ADD_PLAYLIST
+                            }
+                        }
                     }
                 }
-            }
-        }
-        lifecycleScope.launch {
-            viewModel.playerControllerUiState.collect {
-                itemAdapter.updateCurrentTrack(it.currentTrack)
             }
         }
     }

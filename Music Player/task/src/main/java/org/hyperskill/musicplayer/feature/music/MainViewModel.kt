@@ -17,24 +17,28 @@ import org.hyperskill.musicplayer.feature.music.MainActivityUiState.State.PLAY_M
 import org.hyperskill.musicplayer.model.Item
 import org.hyperskill.musicplayer.model.Playlist
 import org.hyperskill.musicplayer.model.Song
+import org.hyperskill.musicplayer.model.toIds
 import org.hyperskill.musicplayer.model.toSelector
+import org.hyperskill.musicplayer.model.toTrack
 import javax.inject.Inject
 
-val defaultSongs = (1..10).map {
-    Song(
-        id = it,
-        artist = "artist$it",
-        title = "title$it",
-        duration = 215_000
+val defaultTracks = (1..10).map {
+    Item.Track(
+        Song(
+            id = it,
+            artist = "artist$it",
+            title = "title$it",
+            duration = 215_000
+        )
     )
 }
-val defaultPlaylist = Playlist("All Songs", defaultSongs)
+val defaultPlaylist = Playlist("All Songs", defaultTracks)
 
 data class MainActivityUiState(
     val currentPlayList: Playlist = Playlist(),
     val loadedPlaylist: List<Item.SongSelector> = emptyList(),
     val playlistList: List<Playlist> = emptyList(),
-    val state: State = PLAY_MUSIC
+    val state: State = PLAY_MUSIC,
 ) {
     enum class State { PLAY_MUSIC, ADD_PLAYLIST }
 }
@@ -52,8 +56,8 @@ class MainViewModel @Inject constructor(
     private val _mainUiState = MutableStateFlow(MainActivityUiState())
     val mainUiState = _mainUiState.asStateFlow()
 
-    private val _currentPosition = MutableStateFlow(0)
     private val _currentTrack: MutableStateFlow<Item.Track?> = MutableStateFlow(null)
+    private val _currentPosition = MutableStateFlow(0)
     val playerControllerUiState = combine(_currentPosition, _currentTrack) { position, track ->
         PlayerControllerUiState(
             currentPosition = position,
@@ -61,10 +65,9 @@ class MainViewModel @Inject constructor(
         )
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.Eagerly,
+        started = SharingStarted.WhileSubscribed(5000),
         initialValue = PlayerControllerUiState()
     )
-
 
     var addPlaylistEtPlaylistName = ""
 
@@ -80,7 +83,7 @@ class MainViewModel @Inject constructor(
             }
         } else {
             _mainUiState.update {
-                it.copy(loadedPlaylist = defaultPlaylist.songs.map { song -> song.toSelector() })
+                it.copy(loadedPlaylist = defaultPlaylist.tracks.map { song -> song.toSelector() })
             }
         }
     }
@@ -98,13 +101,13 @@ class MainViewModel @Inject constructor(
     }
 
     fun onMenuAddClick(): String {
-        if (mainViewModelState.currentPlayList.songs.isEmpty()) {
+        if (mainViewModelState.currentPlayList.tracks.isEmpty()) {
             return "no songs loaded, click search to load songs"
         }
         _mainUiState.update {
             it.copy(
                 state = ADD_PLAYLIST,
-                loadedPlaylist = defaultSongs.map { song -> song.toSelector() })
+                loadedPlaylist = defaultTracks.map { song -> song.toSelector() })
         }
         return ""
     }
@@ -131,20 +134,17 @@ class MainViewModel @Inject constructor(
             Playlist(
                 addPlaylistEtPlaylistName,
                 mainViewModelState.loadedPlaylist.filter { it.isSelected }
-                    .map { selector -> selector.song }
+                    .map { selector -> selector.toTrack() }
             ))
-        addPlaylistEtPlaylistName = ""
+        resetAddMusicState()
         _mainUiState.update { it.copy(state = PLAY_MUSIC) }
         return ""
     }
 
     fun onCancelClick() {
-        addPlaylistEtPlaylistName = ""
+        resetAddMusicState()
         _mainUiState.update {
-            it.copy(
-                state = PLAY_MUSIC,
-                loadedPlaylist = emptyList()
-            )
+            it.copy(state = PLAY_MUSIC)
         }
     }
 
@@ -155,29 +155,42 @@ class MainViewModel @Inject constructor(
             }
         }
     }
+
+    private fun resetAddMusicState() {
+        addPlaylistEtPlaylistName = ""
+        _mainUiState.update {
+            it.copy(loadedPlaylist = emptyList())
+        }
+    }
     //endregion
 
     //region Player Controller
     fun loadPlaylist(position: Int) {
         val newPlaylist = mainViewModelState.playlistList[position]
-        if (mainViewModelState.state == PLAY_MUSIC) {
-            val shouldKeepCurrentTrack =
-                currentTrack?.song in mainViewModelState.playlistList[position].songs
-            _mainUiState.update { it.copy(currentPlayList = newPlaylist) }
-            if (!shouldKeepCurrentTrack) startTrack(null)
-        } else {
-            _mainUiState.update {
+        when (mainViewModelState.state) {
+            PLAY_MUSIC -> {
+                val shouldKeepCurrentTrack = currentTrack?.id in newPlaylist.toIds()
+                _mainUiState.update { it.copy(currentPlayList = newPlaylist) }
+                if (!shouldKeepCurrentTrack) {
+                    resetPlayMusicState()
+                } else {
+                    updateStateOfTrackInPlaylist(currentTrack!!.id, Item.Track.TrackState.PLAYING)
+                }
+            }
 
-                val includedInOldListAndSelectedIds = mainViewModelState.loadedPlaylist
-                    .filter { selector -> selector.song in newPlaylist.songs && selector.isSelected }
-                    .map { selector -> selector.song.id }
-                it.copy(
-                    loadedPlaylist = it.playlistList[position].songs.map { song ->
-                        song.toSelector(
-                            song.id in includedInOldListAndSelectedIds
-                        )
-                    }
-                )
+            ADD_PLAYLIST -> {
+                _mainUiState.update {
+                    val includedInOldListAndSelectedIds = mainViewModelState.loadedPlaylist
+                        .filter { selector ->
+                            selector.id in newPlaylist.toIds() && selector.isSelected
+                        }
+                        .map { selector -> selector.id }
+                    it.copy(
+                        loadedPlaylist = it.playlistList[position].tracks.map { track ->
+                            track.toSelector(track.id in includedInOldListAndSelectedIds)
+                        }
+                    )
+                }
             }
         }
     }
@@ -187,10 +200,13 @@ class MainViewModel @Inject constructor(
         _mainUiState.update {
             it.copy(
                 playlistList = it.playlistList.toMutableList().apply { remove(thisPlaylist) },
-                currentPlayList = if (it.currentPlayList == thisPlaylist) defaultPlaylist else it.currentPlayList,
-                loadedPlaylist = if (it.loadedPlaylist.map { selector -> selector.song } ==
-                    thisPlaylist.songs && it.state == ADD_PLAYLIST) {
-                    defaultPlaylist.songs.map { song -> song.toSelector() }
+                currentPlayList = if (it.currentPlayList.toIds() == thisPlaylist.toIds()) {
+                    defaultPlaylist
+                } else it.currentPlayList,
+                loadedPlaylist = if (it.loadedPlaylist.toIds() == thisPlaylist.toIds() &&
+                    it.state == ADD_PLAYLIST
+                ) {
+                    defaultPlaylist.tracks.map { song -> song.toSelector() }
                 } else it.loadedPlaylist
             )
         }
@@ -198,45 +214,29 @@ class MainViewModel @Inject constructor(
 
     fun onPlayOrPauseClick(position: Int) {
         if (currentTrack != null &&
-            mainViewModelState.currentPlayList.songs[position].id == currentTrack!!.song.id
+            currentTrack?.id == mainViewModelState.currentPlayList.tracks[position].id
         ) {
             switchCurrentTrackState()
             return
         }
+        startTrack(mainViewModelState.currentPlayList.tracks[position])
 
-        startTrack(
-            Item.Track(
-                song = mainViewModelState.currentPlayList.songs[position],
-                state = Item.Track.TrackState.PLAYING
-            )
-        )
     }
 
     fun onPlayOrPauseClick() {
-        if (mainViewModelState.currentPlayList.songs.isEmpty()) return
+        if (mainViewModelState.currentPlayList.tracks.isEmpty()) return
         if (currentTrack != null) {
             switchCurrentTrackState()
             return
         }
-        startTrack(
-            Item.Track(
-                song = mainViewModelState.currentPlayList.songs[0],
-                state = Item.Track.TrackState.PLAYING
-            )
-        )
+        startTrack(mainViewModelState.currentPlayList.tracks[0])
     }
 
-    fun onStopClick() {
-        startTrack(null)
-        mediaPlayer.stop()
-    }
+    fun onStopClick() = resetPlayMusicState()
 
-    fun onControllerSeekBarChange(value: Int) {
-        _currentPosition.value = value
-        updatePositionJob?.cancel()
-    }
+    fun onTouchStart() = updatePositionJob?.cancel()
 
-    fun onStopTouch(value: Int) {
+    fun onTouchStop(value: Int) {
         mediaPlayer.update(value)
         updatePosition()
     }
@@ -244,32 +244,63 @@ class MainViewModel @Inject constructor(
     private fun switchCurrentTrackState() {
         if (currentTrack?.state == Item.Track.TrackState.PLAYING) {
             _currentTrack.update { it?.copy(state = Item.Track.TrackState.PAUSED) }
+            updateStateOfTrackInPlaylist(currentTrack!!.id, Item.Track.TrackState.PAUSED)
             mediaPlayer.pause()
         } else {
             _currentTrack.update { it?.copy(state = Item.Track.TrackState.PLAYING) }
+            updateStateOfTrackInPlaylist(currentTrack!!.id, Item.Track.TrackState.PLAYING)
             mediaPlayer.resume()
+            updatePosition()
         }
     }
 
-    private fun startTrack(track: Item.Track?) {
-        _currentTrack.value = track
-        _currentPosition.value = 0
-        mediaPlayer.stop()
-        if (track != null) {
-            mediaPlayer.play()
-            mediaPlayer.onComplete {
-                startTrack(null)
-            }
-            updatePosition()
+    private fun startTrack(track: Item.Track) {
+        resetPlayMusicState()
+        _currentTrack.value = track.copy(state = Item.Track.TrackState.PLAYING)
+        updateStateOfTrackInPlaylist(track.id, Item.Track.TrackState.PLAYING)
+        mediaPlayer.play()
+        mediaPlayer.onComplete {
+            resetPlayMusicState()
         }
+        updatePosition()
     }
 
     private fun updatePosition() {
         updatePositionJob = viewModelScope.launch {
-            delay(1000)
+            delay(500)
             _currentPosition.value = mediaPlayer.position
             updatePosition()
         }
     }
-    //endregion
+
+    private fun updateStateOfTrackInPlaylist(trackId: Int, state: Item.Track.TrackState) {
+        _mainUiState.update { currentState ->
+            currentState.copy(
+                currentPlayList = currentState.currentPlayList.copy(
+                    tracks = currentState.currentPlayList.tracks.map { currentTrack ->
+                        if (currentTrack.id == trackId) currentTrack.copy(
+                            state = state
+                        ) else if (state == Item.Track.TrackState.PLAYING) currentTrack.copy(
+                            state = Item.Track.TrackState.PAUSED
+                        ) else currentTrack
+                    }
+                ))
+        }
+    }
+
+    private fun resetPlayMusicState() {
+        updatePositionJob?.cancel()
+        mediaPlayer.stop()
+        _currentPosition.value = 0
+        _mainUiState.update { currentState ->
+            currentState.copy(
+                currentPlayList = currentState.currentPlayList.copy(
+                    tracks = currentState.currentPlayList.tracks.map { currentTrack ->
+                        currentTrack.copy(state = Item.Track.TrackState.PAUSED)
+                    }
+                ))
+        }
+        _currentTrack.value = null
+    }
+//endregion
 }

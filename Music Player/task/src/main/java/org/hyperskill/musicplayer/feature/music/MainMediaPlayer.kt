@@ -3,8 +3,6 @@ package org.hyperskill.musicplayer.feature.music
 import android.content.Context
 import android.media.MediaPlayer
 import org.hyperskill.musicplayer.R
-import javax.inject.Inject
-import javax.inject.Singleton
 
 class MainMediaPlayer(private val context: Context) {
 
@@ -19,9 +17,8 @@ class MainMediaPlayer(private val context: Context) {
     }
 
     fun stop() {
+        player?.seekTo(0)
         player?.stop()
-        player?.release()
-        player = null
     }
 
     fun pause() {

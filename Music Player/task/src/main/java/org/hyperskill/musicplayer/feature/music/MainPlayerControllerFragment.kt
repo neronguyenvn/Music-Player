@@ -1,13 +1,12 @@
 package org.hyperskill.musicplayer.feature.music
 
-import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
-import androidx.annotation.RequiresApi
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -21,7 +20,7 @@ class MainPlayerControllerFragment(
     private var _binding: FragmentMainPlayerBinding? = null
     private val binding get() = _binding!!
 
-    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -37,25 +36,26 @@ class MainPlayerControllerFragment(
         binding.controllerSeekBar.setOnSeekBarChangeListener(
             object : OnSeekBarChangeListener {
                 override fun onProgressChanged(p0: SeekBar?, p1: Int, p2: Boolean) {
-                    viewModel.onControllerSeekBarChange(p1)
+                    binding.controllerTvCurrentTime.text = formatMilliseconds(p1 * 1000)
                 }
 
-                override fun onStartTrackingTouch(p0: SeekBar?) {}
+                override fun onStartTrackingTouch(p0: SeekBar?) {
+                    viewModel.onTouchStart()
+                }
+
                 override fun onStopTrackingTouch(p0: SeekBar?) {
-                    viewModel.onStopTouch(p0?.progress ?: 0)
+                    viewModel.onTouchStop(p0?.progress ?: 0)
                 }
             }
         )
         return binding.root
     }
 
-    @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         lifecycleScope.launch {
             viewModel.playerControllerUiState.collect {
-                binding.controllerTvCurrentTime.text = formatMilliseconds(it.currentPosition)
-                binding.controllerSeekBar.max = it.currentTrack?.song?.duration ?: 0
-                binding.controllerSeekBar.progress = it.currentPosition
+                binding.controllerSeekBar.max = (it.currentTrack?.song?.duration ?: 0) / 1000
+                binding.controllerSeekBar.progress = it.currentPosition / 1000
                 binding.controllerTvTotalTime.text =
                     formatMilliseconds(it.currentTrack?.song?.duration ?: 0)
             }

@@ -1,14 +1,11 @@
 package org.hyperskill.musicplayer.model
 
+import java.nio.channels.Selector
+
 data class Playlist(
     val name: String = "",
-    val songs: List<Song> = emptyList()
+    val tracks: List<Item.Track> = emptyList()
 )
 
-fun Playlist.toTrackList(currentTrack: Item.Track?): List<Item.Track> {
-    return this.songs.map {
-        if (currentTrack != null && it.id == currentTrack.song.id) {
-            currentTrack
-        } else Item.Track(it)
-    }
-}
+fun Playlist.toIds() = this.tracks.map { it.id }
+fun List<Item.SongSelector>.toIds() = this.map { it.id }

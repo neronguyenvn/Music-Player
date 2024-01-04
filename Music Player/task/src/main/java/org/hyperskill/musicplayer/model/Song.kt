@@ -1,18 +1,20 @@
 package org.hyperskill.musicplayer.model
 
-sealed class Item {
+sealed class Item(open val song: Song) {
 
     data class Track(
-        val song: Song,
-        val state: TrackState = TrackState.STOPPED
-    ) : Item() {
+        override val song: Song,
+        val state: TrackState = TrackState.STOPPED,
+    ) : Item(song) {
         enum class TrackState { PLAYING, PAUSED, STOPPED }
     }
 
     data class SongSelector(
-        val song: Song,
-        val isSelected: Boolean
-    ) : Item()
+        override val song: Song,
+        val isSelected: Boolean,
+    ) : Item(song)
+
+    val id get() = song.id
 }
 
 data class Song(
@@ -22,12 +24,14 @@ data class Song(
     val duration: Int
 )
 
-fun Song.toSelector(isSelected: Boolean = false): Item.SongSelector {
+fun Item.Track.toSelector(isSelected: Boolean = false): Item.SongSelector {
     return Item.SongSelector(
-        song = this,
+        song = this.song,
         isSelected = isSelected
     )
 }
 
-
+fun Item.SongSelector.toTrack(): Item.Track {
+    return Item.Track(this.song)
+}
 

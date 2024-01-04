@@ -32,7 +32,6 @@ class MainAddPlaylistFragment(private val viewModel: MainViewModel) : Fragment()
         return binding.root
     }
 
-    @RequiresApi(Build.VERSION_CODES.N)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         binding.addPlaylistBtnOk.setOnClickListener {
             val errorString = viewModel.onAddOkClick()

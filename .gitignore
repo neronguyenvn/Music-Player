@@ -1,2 +1,4 @@
 /Music Player/task/build
 /.gradle
+/build
+/.idea/libraries

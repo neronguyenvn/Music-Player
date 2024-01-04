@@ -6,12 +6,11 @@ plugins {
 }
 
 android {
-    compileSdkVersion hs.android.compileSdkVersion
-
     defaultConfig {
         applicationId "org.hyperskill.musicplayer"
-        minSdkVersion hs.android.minSdkVersion
-        targetSdkVersion hs.android.targetSdkVersion
+        minSdk 26
+        targetSdk 31
+        compileSdk 31
         versionCode 1
         versionName '1.0'
     }
@@ -39,7 +38,7 @@ dependencies {
     implementation "com.google.android.material:material:$material"
 
     implementation "androidx.activity:activity-ktx:1.2.0"
-    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.0.0"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.4.0"
     implementation "androidx.recyclerview:recyclerview:1.2.0"
     implementation "androidx.fragment:fragment-ktx:1.2.0"
 
