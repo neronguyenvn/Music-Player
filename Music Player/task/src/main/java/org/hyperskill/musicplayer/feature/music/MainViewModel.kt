@@ -1,6 +1,5 @@
 package org.hyperskill.musicplayer.feature.music
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -101,11 +100,13 @@ class MainViewModel : ViewModel() {
                 viewModelState.loadedPlaylist.filter { it.isSelected }
                     .map { selector -> selector.song }
             ))
+        addPlaylistEtPlaylistName = ""
         _viewModelState.update { it.copy(state = PLAY_MUSIC) }
         return ""
     }
 
     fun onCancelClick() {
+        addPlaylistEtPlaylistName = ""
         _viewModelState.update {
             it.copy(
                 state = PLAY_MUSIC,
