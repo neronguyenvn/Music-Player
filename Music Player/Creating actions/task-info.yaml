@@ -3875,12 +3875,6 @@ files:
   - name: src/main/res/layout/fragment_add_playlist.xml
     visible: true
     learner_created: true
-  - name: src/main/res/raw/wisdom.mp3
-    visible: true
-    learner_created: true
-feedback_link: https://hyperskill.org/projects/289/stages/1507/implement#comment
-status: Solved
-feedback:
-  message: Congratulations!
-  time: "Wed, 03 Jan 2024 11:14:50 UTC"
+feedback_link: https://hyperskill.org/learn/step/22740#comment
+status: Failed
 record: 1

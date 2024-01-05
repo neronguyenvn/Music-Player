@@ -5657,9 +5657,6 @@ files:
           }
       }
     learner_created: false
-  - name: src/main/res/raw/wisdom.mp3
-    visible: true
-    learner_created: true
   - name: src/main/java/org/hyperskill/musicplayer/MainApplication.kt
     visible: true
     learner_created: true
@@ -5669,12 +5666,18 @@ files:
   - name: src/main/java/org/hyperskill/musicplayer/feature/music/PlaybackModule.kt
     visible: true
     learner_created: true
+  - name: src/test/java/org/hyperskill/musicplayer/Stage4UnitTest.kt
+    visible: true
+    learner_created: true
+  - name: src/test/java/org/hyperskill/musicplayer/internals/SongFakeRepository.kt
+    visible: true
+    learner_created: true
+  - name: src/main/res/raw/wisdom.mp3
+    visible: true
+    learner_created: true
 feedback_link: https://hyperskill.org/learn/step/22741#comment
-status: Failed
+status: Solved
 feedback:
-  message: After click on controllerBtnPlayPause right after mainButtonSearch the
-    default song item should start playing. On controllerSeekBar progress
-  time: "Thu, 04 Jan 2024 20:53:05 UTC"
-  expected: <1>
-  actual: <1001>
+  message: Congratulations!
+  time: "Fri, 05 Jan 2024 14:15:08 UTC"
 record: 3
