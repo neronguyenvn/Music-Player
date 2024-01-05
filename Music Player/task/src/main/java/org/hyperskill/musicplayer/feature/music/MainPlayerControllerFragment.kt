@@ -1,14 +1,15 @@
 package org.hyperskill.musicplayer.feature.music
 
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.SeekBar
 import android.widget.SeekBar.OnSeekBarChangeListener
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
 import org.hyperskill.musicplayer.databinding.FragmentMainPlayerBinding
 import org.hyperskill.musicplayer.helper.formatMilliseconds
@@ -19,7 +20,6 @@ class MainPlayerControllerFragment(
 
     private var _binding: FragmentMainPlayerBinding? = null
     private val binding get() = _binding!!
-
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -44,7 +44,7 @@ class MainPlayerControllerFragment(
                 }
 
                 override fun onStopTrackingTouch(p0: SeekBar?) {
-                    viewModel.onTouchStop(p0?.progress ?: 0)
+                    viewModel.onTouchStop((p0?.progress?.times(1000)) ?: 0)
                 }
             }
         )
@@ -53,11 +53,13 @@ class MainPlayerControllerFragment(
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         lifecycleScope.launch {
-            viewModel.playerControllerUiState.collect {
-                binding.controllerSeekBar.max = (it.currentTrack?.song?.duration ?: 0) / 1000
-                binding.controllerSeekBar.progress = it.currentPosition / 1000
-                binding.controllerTvTotalTime.text =
-                    formatMilliseconds(it.currentTrack?.song?.duration ?: 0)
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.playerControllerUiState.collect {
+                    binding.controllerSeekBar.max = (it.currentTrack?.song?.duration ?: 0) / 1000
+                    binding.controllerSeekBar.progress = it.currentPosition / 1000
+                    binding.controllerTvTotalTime.text =
+                        formatMilliseconds(it.currentTrack?.song?.duration ?: 0)
+                }
             }
         }
     }
