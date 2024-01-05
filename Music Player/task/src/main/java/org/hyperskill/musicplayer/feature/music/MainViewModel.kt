@@ -83,7 +83,6 @@ class MainViewModel @Inject constructor(
             }
             if (currentTrack == null) {
                 _currentTrack.value = defaultTracks[0]
-                mediaPlayer.createWithoutPlay()
             }
         } else {
             _mainUiState.update {
@@ -238,23 +237,43 @@ class MainViewModel @Inject constructor(
 
     fun onStopClick() = resetPlayMusicState()
 
-    fun onTouchStart() = updatePositionJob?.cancel()
+    fun onTouchStart() {
+        updatePositionJob?.cancel()
+        if (currentTrack?.state == Item.Track.TrackState.STOPPED) {
+            mediaPlayer.createWithoutPlay()
+        }
+    }
 
     fun onTouchStop(value: Int) {
         mediaPlayer.update(value)
         updatePosition()
+        if (currentTrack?.state == Item.Track.TrackState.STOPPED) {
+            _currentTrack.update { it?.copy(state = Item.Track.TrackState.PAUSED) }
+        }
     }
 
     private fun switchCurrentTrackState() {
-        if (currentTrack?.state == Item.Track.TrackState.PLAYING) {
-            _currentTrack.update { it?.copy(state = Item.Track.TrackState.PAUSED) }
-            updateStateOfTrackInPlaylist(currentTrack!!.id, Item.Track.TrackState.PAUSED)
-            mediaPlayer.pause()
-        } else {
-            _currentTrack.update { it?.copy(state = Item.Track.TrackState.PLAYING) }
-            updateStateOfTrackInPlaylist(currentTrack!!.id, Item.Track.TrackState.PLAYING)
-            mediaPlayer.resume()
-            updatePosition()
+        when (currentTrack?.state) {
+            Item.Track.TrackState.PLAYING -> {
+                _currentTrack.update { it?.copy(state = Item.Track.TrackState.PAUSED) }
+                updateStateOfTrackInPlaylist(currentTrack!!.id, Item.Track.TrackState.PAUSED)
+                mediaPlayer.pause()
+            }
+
+            Item.Track.TrackState.PAUSED -> {
+                _currentTrack.update { it?.copy(state = Item.Track.TrackState.PLAYING) }
+                updateStateOfTrackInPlaylist(currentTrack!!.id, Item.Track.TrackState.PLAYING)
+                mediaPlayer.resume()
+            }
+
+            Item.Track.TrackState.STOPPED -> {
+                _currentTrack.update { it?.copy(state = Item.Track.TrackState.PLAYING) }
+                updateStateOfTrackInPlaylist(currentTrack!!.id, Item.Track.TrackState.PLAYING)
+                mediaPlayer.play()
+                updatePosition()
+            }
+
+            else -> throw UnsupportedOperationException()
         }
     }
 
@@ -271,8 +290,8 @@ class MainViewModel @Inject constructor(
 
     private fun updatePosition() {
         updatePositionJob = viewModelScope.launch {
-            delay(500)
             _currentPosition.value = mediaPlayer.position
+            delay(100)
             updatePosition()
         }
     }
@@ -285,7 +304,7 @@ class MainViewModel @Inject constructor(
                         if (currentTrack.id == trackId) currentTrack.copy(
                             state = state
                         ) else if (state == Item.Track.TrackState.PLAYING) currentTrack.copy(
-                            state = Item.Track.TrackState.PAUSED
+                            state = Item.Track.TrackState.STOPPED
                         ) else currentTrack
                     }
                 ))
@@ -293,18 +312,18 @@ class MainViewModel @Inject constructor(
     }
 
     private fun resetPlayMusicState() {
-        updatePositionJob?.cancel()
         mediaPlayer.stop()
         _currentPosition.value = 0
+        updatePositionJob?.cancel()
+        _currentTrack.update { it?.copy(state = Item.Track.TrackState.STOPPED) }
         _mainUiState.update { currentState ->
             currentState.copy(
                 currentPlayList = currentState.currentPlayList.copy(
                     tracks = currentState.currentPlayList.tracks.map { currentTrack ->
-                        currentTrack.copy(state = Item.Track.TrackState.PAUSED)
+                        currentTrack.copy(state = Item.Track.TrackState.STOPPED)
                     }
                 ))
         }
-        _currentTrack.value = null
     }
-//endregion
+    //endregion
 }

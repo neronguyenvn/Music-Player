@@ -25,6 +25,7 @@ class MainMediaPlayer(private val context: Context) {
     fun stop() {
         player?.seekTo(0)
         player?.stop()
+        player = null
     }
 
     fun pause() {
