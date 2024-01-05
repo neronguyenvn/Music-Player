@@ -9,16 +9,18 @@ class MainMediaPlayer(private val context: Context) {
     private var player: MediaPlayer? = null
     val position: Int get() = player?.currentPosition ?: 0
 
-    fun play() {
+    fun play(action: () -> Unit) {
         MediaPlayer.create(context, R.raw.wisdom).apply {
             player = this
             start()
+            setOnCompletionListener { action() }
         }
     }
 
-    fun createWithoutPlay() {
+    fun createWithoutPlay(action: () -> Unit) {
         MediaPlayer.create(context, R.raw.wisdom).apply {
             player = this
+            setOnCompletionListener { action() }
         }
     }
 
@@ -38,9 +40,5 @@ class MainMediaPlayer(private val context: Context) {
 
     fun update(value: Int) {
         player?.seekTo(value)
-    }
-
-    fun onComplete(action: () -> Unit) {
-        player?.setOnCompletionListener { action() }
     }
 }

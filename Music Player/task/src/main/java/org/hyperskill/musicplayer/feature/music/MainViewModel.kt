@@ -176,6 +176,7 @@ class MainViewModel @Inject constructor(
                 _mainUiState.update { it.copy(currentPlayList = newPlaylist) }
                 if (!shouldKeepCurrentTrack) {
                     resetPlayMusicState()
+                    _currentTrack.value = newPlaylist.tracks[0]
                 } else {
                     updateStateOfTrackInPlaylist(currentTrack!!.id, Item.Track.TrackState.PLAYING)
                 }
@@ -240,7 +241,7 @@ class MainViewModel @Inject constructor(
     fun onTouchStart() {
         updatePositionJob?.cancel()
         if (currentTrack?.state == Item.Track.TrackState.STOPPED) {
-            mediaPlayer.createWithoutPlay()
+            mediaPlayer.createWithoutPlay { resetPlayMusicState() }
         }
     }
 
@@ -269,7 +270,7 @@ class MainViewModel @Inject constructor(
             Item.Track.TrackState.STOPPED -> {
                 _currentTrack.update { it?.copy(state = Item.Track.TrackState.PLAYING) }
                 updateStateOfTrackInPlaylist(currentTrack!!.id, Item.Track.TrackState.PLAYING)
-                mediaPlayer.play()
+                mediaPlayer.play { resetPlayMusicState() }
                 updatePosition()
             }
 
@@ -281,10 +282,7 @@ class MainViewModel @Inject constructor(
         resetPlayMusicState()
         _currentTrack.value = track.copy(state = Item.Track.TrackState.PLAYING)
         updateStateOfTrackInPlaylist(track.id, Item.Track.TrackState.PLAYING)
-        mediaPlayer.play()
-        mediaPlayer.onComplete {
-            resetPlayMusicState()
-        }
+        mediaPlayer.play { resetPlayMusicState() }
         updatePosition()
     }
 
@@ -312,7 +310,6 @@ class MainViewModel @Inject constructor(
     }
 
     private fun resetPlayMusicState() {
-        mediaPlayer.stop()
         _currentPosition.value = 0
         updatePositionJob?.cancel()
         _currentTrack.update { it?.copy(state = Item.Track.TrackState.STOPPED) }
@@ -324,6 +321,7 @@ class MainViewModel @Inject constructor(
                     }
                 ))
         }
+        mediaPlayer.stop()
     }
     //endregion
 }
