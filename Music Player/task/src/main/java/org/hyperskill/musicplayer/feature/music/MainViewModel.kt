@@ -81,6 +81,10 @@ class MainViewModel @Inject constructor(
             _mainUiState.update {
                 it.copy(currentPlayList = defaultPlaylist)
             }
+            if (currentTrack == null) {
+                _currentTrack.value = defaultTracks[0]
+                mediaPlayer.createWithoutPlay()
+            }
         } else {
             _mainUiState.update {
                 it.copy(loadedPlaylist = defaultPlaylist.tracks.map { song -> song.toSelector() })

@@ -16,6 +16,12 @@ class MainMediaPlayer(private val context: Context) {
         }
     }
 
+    fun createWithoutPlay() {
+        MediaPlayer.create(context, R.raw.wisdom).apply {
+            player = this
+        }
+    }
+
     fun stop() {
         player?.seekTo(0)
         player?.stop()
