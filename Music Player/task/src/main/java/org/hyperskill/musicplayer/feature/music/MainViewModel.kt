@@ -72,7 +72,10 @@ class MainViewModel @Inject constructor(
 
     private val defaultTracks = defaultPlaylist.tracks
 
-    fun onSearchClick() {
+    fun onSearchClick(): String {
+        if (defaultPlaylist.tracks.isEmpty()) {
+            return "No songs found"
+        }
         addPlaylist(defaultPlaylist)
         if (mainViewModelState.state == PLAY_MUSIC) {
             _mainUiState.update {
@@ -86,6 +89,7 @@ class MainViewModel @Inject constructor(
                 it.copy(loadedPlaylist = defaultPlaylist.tracks.map { song -> song.toSelector() })
             }
         }
+        return ""
     }
 
     //region Add A Playlist

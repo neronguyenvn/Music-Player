@@ -49,7 +49,10 @@ class MainActivity : AppCompatActivity() {
             if (!isReadStoragePermissionGranted(this)) {
                 requestReadStoragePermission(this)
             } else {
-                viewModel.onSearchClick()
+                val result = viewModel.onSearchClick()
+                if (result.isNotEmpty()) {
+                    Toast.makeText(this, result, Toast.LENGTH_SHORT).show()
+                }
             }
         }
         /*        val itemAdapter = ItemsAdapter(
@@ -182,7 +185,10 @@ class MainActivity : AppCompatActivity() {
         when (requestCode) {
             READ_EXTERNAL_STORAGE_PERMISSION_CODE -> {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    viewModel.onSearchClick()
+                    val result = viewModel.onSearchClick()
+                    if (result.isNotEmpty()) {
+                        Toast.makeText(this, result, Toast.LENGTH_SHORT).show()
+                    }
                 } else {
                     Toast.makeText(
                         this,
