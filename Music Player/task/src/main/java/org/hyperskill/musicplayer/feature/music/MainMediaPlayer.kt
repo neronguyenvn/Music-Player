@@ -1,24 +1,32 @@
 package org.hyperskill.musicplayer.feature.music
 
+import android.content.ContentUris
 import android.content.Context
 import android.media.MediaPlayer
-import org.hyperskill.musicplayer.R
 
 class MainMediaPlayer(private val context: Context) {
 
     private var player: MediaPlayer? = null
     val position: Int get() = player?.currentPosition ?: 0
 
-    fun play(action: () -> Unit) {
-        MediaPlayer.create(context, R.raw.wisdom).apply {
+    fun play(songId: Int, action: () -> Unit) {
+        val songUri = ContentUris.withAppendedId(
+            android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            songId.toLong()
+        )
+        MediaPlayer.create(context, songUri).apply {
             player = this
             start()
             setOnCompletionListener { action() }
         }
     }
 
-    fun createWithoutPlay(action: () -> Unit) {
-        MediaPlayer.create(context, R.raw.wisdom).apply {
+    fun createWithoutPlay(songId: Int, action: () -> Unit) {
+        val songUri = ContentUris.withAppendedId(
+            android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            songId.toLong()
+        )
+        MediaPlayer.create(context, songUri).apply {
             player = this
             setOnCompletionListener { action() }
         }
@@ -27,6 +35,7 @@ class MainMediaPlayer(private val context: Context) {
     fun stop() {
         player?.seekTo(0)
         player?.stop()
+        player?.release()
         player = null
     }
 

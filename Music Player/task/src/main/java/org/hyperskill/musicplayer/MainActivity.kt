@@ -1,14 +1,18 @@
 package org.hyperskill.musicplayer
 
-import android.annotation.SuppressLint
+import android.Manifest
+import android.app.Activity
 import android.app.AlertDialog
+import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Bundle
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -21,6 +25,8 @@ import org.hyperskill.musicplayer.feature.music.MainActivityUiState
 import org.hyperskill.musicplayer.feature.music.MainAddPlaylistFragment
 import org.hyperskill.musicplayer.feature.music.MainPlayerControllerFragment
 import org.hyperskill.musicplayer.feature.music.MainViewModel
+
+private const val READ_EXTERNAL_STORAGE_PERMISSION_CODE = 1
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
@@ -40,7 +46,11 @@ class MainActivity : AppCompatActivity() {
             .addToBackStack(null)
             .commit()
         binding.mainButtonSearch.setOnClickListener {
-            viewModel.onSearchClick()
+            if (!isReadStoragePermissionGranted(this)) {
+                requestReadStoragePermission(this)
+            } else {
+                viewModel.onSearchClick()
+            }
         }
         /*        val itemAdapter = ItemsAdapter(
             onTrackPlayOrPause = { position -> viewModel.onPlayOrPauseClick(position) },
@@ -144,6 +154,43 @@ class MainActivity : AppCompatActivity() {
             }
 
             else -> super.onOptionsItemSelected(item)
+        }
+    }
+
+
+    private fun isReadStoragePermissionGranted(context: Context): Boolean {
+        return ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestReadStoragePermission(activity: Activity) {
+        ActivityCompat.requestPermissions(
+            activity,
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+            READ_EXTERNAL_STORAGE_PERMISSION_CODE
+        )
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        when (requestCode) {
+            READ_EXTERNAL_STORAGE_PERMISSION_CODE -> {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    viewModel.onSearchClick()
+                } else {
+                    Toast.makeText(
+                        this,
+                        "Songs cannot be loaded without permission",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
         }
     }
 }

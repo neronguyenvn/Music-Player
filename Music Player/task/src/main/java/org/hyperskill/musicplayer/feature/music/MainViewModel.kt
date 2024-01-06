@@ -12,27 +12,15 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.hyperskill.musicplayer.data.SongRepository
 import org.hyperskill.musicplayer.feature.music.MainActivityUiState.State.ADD_PLAYLIST
 import org.hyperskill.musicplayer.feature.music.MainActivityUiState.State.PLAY_MUSIC
 import org.hyperskill.musicplayer.model.Item
 import org.hyperskill.musicplayer.model.Playlist
-import org.hyperskill.musicplayer.model.Song
 import org.hyperskill.musicplayer.model.toIds
 import org.hyperskill.musicplayer.model.toSelector
 import org.hyperskill.musicplayer.model.toTrack
 import javax.inject.Inject
-
-val defaultTracks = (1..10).map {
-    Item.Track(
-        Song(
-            id = it,
-            artist = "artist$it",
-            title = "title$it",
-            duration = 215_000
-        )
-    )
-}
-val defaultPlaylist = Playlist("All Songs", defaultTracks)
 
 data class MainActivityUiState(
     val currentPlayList: Playlist = Playlist(),
@@ -50,7 +38,9 @@ data class PlayerControllerUiState(
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val mediaPlayer: MainMediaPlayer
+    private val mediaPlayer: MainMediaPlayer,
+    private val songRepository: SongRepository
+
 ) : ViewModel() {
 
     private val _mainUiState = MutableStateFlow(MainActivityUiState())
@@ -74,6 +64,13 @@ class MainViewModel @Inject constructor(
     private val mainViewModelState get() = _mainUiState.value
     private val currentTrack get() = _currentTrack.value
     private var updatePositionJob: Job? = null
+    private val defaultPlaylist
+        get() = Playlist(
+            tracks = songRepository.getSongsFromDevice().map { Item.Track(it) },
+            name = "All Songs"
+        )
+
+    private val defaultTracks = defaultPlaylist.tracks
 
     fun onSearchClick() {
         addPlaylist(defaultPlaylist)
@@ -241,7 +238,7 @@ class MainViewModel @Inject constructor(
     fun onTouchStart() {
         updatePositionJob?.cancel()
         if (currentTrack?.state == Item.Track.TrackState.STOPPED) {
-            mediaPlayer.createWithoutPlay { resetPlayMusicState() }
+            mediaPlayer.createWithoutPlay(currentTrack!!.id) { resetPlayMusicState() }
         }
     }
 
@@ -270,7 +267,7 @@ class MainViewModel @Inject constructor(
             Item.Track.TrackState.STOPPED -> {
                 _currentTrack.update { it?.copy(state = Item.Track.TrackState.PLAYING) }
                 updateStateOfTrackInPlaylist(currentTrack!!.id, Item.Track.TrackState.PLAYING)
-                mediaPlayer.play { resetPlayMusicState() }
+                mediaPlayer.play(currentTrack!!.id) { resetPlayMusicState() }
                 updatePosition()
             }
 
@@ -282,7 +279,7 @@ class MainViewModel @Inject constructor(
         resetPlayMusicState()
         _currentTrack.value = track.copy(state = Item.Track.TrackState.PLAYING)
         updateStateOfTrackInPlaylist(track.id, Item.Track.TrackState.PLAYING)
-        mediaPlayer.play { resetPlayMusicState() }
+        mediaPlayer.play(currentTrack!!.id) { resetPlayMusicState() }
         updatePosition()
     }
 
